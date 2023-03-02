@@ -4,74 +4,75 @@ require __DIR__ . '/vendor/autoload.php';
 use React\Promise\Promise;
 use React\Promise\Deferred;
 
-class ReactImageDownloader{
+class ReactImageDownloader{ // implement AcyncImageDownloader
 
-    function loadAndSaveImages(array $urls, string $destinationPath): Promise
+    private $destinationPath;
+
+    public function __construct($destinationPath){
+        $this->destinationPath = $destinationPath;
+    }
+
+    function load_images(array $urls): Promise
     {
-        $downloadedUrls = [];
-        
-        //foreach
-        $promises = array_map(function ($url) use ($destinationPath, &$downloadedUrls) {
+        $loaded_image = [];
 
+        foreach($urls as $url){
             $deferred = new Deferred();
             $client = new \React\Http\Browser();
             $client->get($url)->then(
-                function (\Psr\Http\Message\ResponseInterface $response) use ($url, $destinationPath, $deferred, &$downloadedUrls) {
-                    $image = \imagecreatefromstring($response->getBody());
+                function (\Psr\Http\Message\ResponseInterface $response) use ($url, $deferred, &$downloadedUrls) {
+                    $image = imagecreatefromstring($response->getBody());
                     if ($image !== false) {
-                        $filename = basename($url);
-                        $path = $destinationPath . '/' . $filename;
-                        \imagepng($image, $path);
-                        $downloadedUrls[] = $path;
-                        $deferred->resolve([$url, $path]);
+                        $filename = uniqid() . "." . pathinfo($url, PATHINFO_EXTENSION);
+                        $path = $this->destinationPath . '/' . $filename;
+                        imagepng($image, $path);
+                        $deferred->resolve($path);
                     } else {
-                        $deferred->reject(new \RuntimeException("Failed to create image from response for URL: $url"));
+                        $deferred->resolve(false);
+                        //$deferred->reject(new \RuntimeException("Failed to create for $url"));
                     }
                 },
                 function ($error) use ($url, $deferred) {
-                    $deferred->reject(new \RuntimeException("Failed to fetch image for URL: $url. Error: $error"));
+                    $deferred->resolve(false);
+                    //$deferred->reject(new \RuntimeException("Failed load img for $url error: $error"));
                 }
             );
-
-
-
-            return $deferred->promise();
-        }, $urls);
+            $loaded_image[] = $deferred->promise();
+        }
         
 
         $deferred_all = new Deferred();
 
-        \React\Promise\all($promises)->then(function ($images) use ($deferred_all, &$downloadedUrls) {
-            echo "pach loaded";
-            var_dump($downloadedUrls);
-            $deferred_all->resolve([$images, $downloadedUrls]);
+        \React\Promise\all($loaded_image)->then(function ($loaded_image) use ($deferred_all) {
+            $deferred_all->resolve($loaded_image);
         });
 
         return $deferred_all->promise();
     }
 }
 
-
-
+/*
 $loadImages = ["http://abikosru.beget.tech/storage/midle_48971662816156.jpg" 
-, "http://abikosru.beget.tech/storage/midle_72161662816156.jpg", "http://abikosru.beget.tech/storage/midle_72161662816156.jpg", "http://abikosru.beget.tech/storage/midle_72161662816156.jpg", "http://abikosru.beget.tech/storage/midle_72161662816156.jpg"];
+, "http://abikosru.beget.tech/storage/midle_72161662816156.jpg", 
+"http://abikosru.beget.tech/storage/midle_72161662816156.jp", 
+"http://abikosru.beget.tech/storage/midle_72161662816156.jpg", 
+"http://abikosru.beget.tech/storage/midle_72161662816156.jpg"];
 
 $loadImages2 =["http://abikosru.beget.tech/storage/midle_72161662816156.jpg"];
 
-
-
-$downloader = new ReactImageDownloader();
-$loads_image = [];
 echo "srart";
-$loads_image[] = $downloader->loadAndSaveImages($loadImages, dirname(__FILE__)) ;
-$loads_image[] = $downloader->loadAndSaveImages($loadImages2, dirname(__FILE__)) ;
+$downloader = new ReactImageDownloader(dirname(__FILE__)."/upload");
+$loads_image = [];
+$loads_image[] = $downloader->load_images($loadImages) ;
+$loads_image[] = $downloader->load_images($loadImages2) ;
+
+\React\Promise\all($loads_image)->then (function ($images) {
+    var_dump($images); 
+    echo "\n end all \n"; 
+}); 
+echo "end";
+*/
 
 
-\React\Promise\all($loads_image)->then(function ($images) {
 
-    
-    echo "\n end all \n";
-});
-
-echo "end osnova";
 
