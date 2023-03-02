@@ -1,0 +1,16 @@
+{
+    "name": "nick/feed_parcer",
+    "type": "project",
+    "require": {
+        "react/http": "^1.8"
+    },
+    "require-dev": {
+        "react/http": "^1.8",
+        "react/stream": "1.2"
+    },
+    "autoload": {
+        "psr-4": {
+            "Nick\\FeedParcer\\": "src/"
+        }
+    }
+}
